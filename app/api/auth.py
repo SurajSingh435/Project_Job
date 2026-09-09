@@ -1,24 +1,33 @@
 """
-app/api/v1/auth.py — Registration and login endpoints.
-"""
-from typing import Annotated
+app/api/auth.py — Registration, login, and logout endpoints.
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+Uses HttpOnly session cookies (Starlette SessionMiddleware).
+No JWT involved.
+"""
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app.models.user import User
-from app.schemas.user import Token, UserCreate, UserRead
-from app.services.auth_service import create_access_token, hash_password, verify_password
+from app.schemas.user import UserCreate, UserLogin, UserRead
+from app.services.auth_service import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserCreate) -> User:
-    """Create a new user account."""
+    """
+    Create a new user account.
+
+    - Hashes the password with bcrypt before saving.
+    - Does NOT log the user in automatically; call /auth/login afterwards.
+    - Returns 409 if the e-mail is already registered.
+    """
     existing = await User.find_one(User.email == payload.email)
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        )
 
     user = User(
         name=payload.name,
@@ -30,15 +39,33 @@ async def register(payload: UserCreate) -> User:
     return user
 
 
-@router.post("/login", response_model=Token)
-async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
-    """Authenticate and return a JWT access token."""
-    user = await User.find_one(User.email == form.username)
-    if not user or not verify_password(form.password, user.password_hash):
+@router.post("/login", response_model=UserRead)
+async def login(payload: UserLogin, request: Request) -> User:
+    """
+    Authenticate with e-mail + password.
+
+    On success, writes the user_id into the signed, HttpOnly session
+    cookie that Starlette manages — no JWT is issued.
+
+    Returns the authenticated user's public profile.
+    """
+    user = await User.find_one(User.email == payload.email)
+    if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
         )
-    token = create_access_token(subject=str(user.id), role=user.role.value)
-    return Token(access_token=token)
+
+    # Store only the user_id in the session — never the password hash
+    request.session["user_id"] = str(user.id)
+    return user
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(request: Request) -> None:
+    """
+    Clear the session cookie, effectively logging the user out.
+
+    Always returns 204 — even if the user wasn't logged in.
+    """
+    request.session.clear()

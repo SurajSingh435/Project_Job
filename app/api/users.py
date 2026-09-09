@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_current_admin, get_current_user
+from app.api.deps import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.user import UserRead, UserUpdate
 
@@ -23,7 +23,7 @@ async def update_me(
     payload: UserUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    """Update the current user's own profile."""
+    """Update the current user's own profile (residents cannot change their role)."""
     update_data = payload.model_dump(exclude_unset=True)
     # Residents must not be able to promote themselves
     if "role" in update_data:
@@ -32,7 +32,7 @@ async def update_me(
     return current_user
 
 
-@router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(get_current_admin)])
+@router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(require_admin)])
 async def get_user(user_id: str) -> User:
     """Admin-only: fetch any user by ID."""
     user = await User.get(user_id)

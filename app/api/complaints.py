@@ -5,7 +5,7 @@ from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import get_current_admin, get_current_user
+from app.api.deps import require_admin, get_current_user
 from app.models.complaint import Complaint, ComplaintStatus
 from app.models.user import User, UserRole
 from app.schemas.complaint import (
@@ -98,7 +98,7 @@ async def patch_complaint(
 @router.delete("/{complaint_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_complaint(
     complaint_id: str,
-    _admin: Annotated[User, Depends(get_current_admin)],
+    _admin: Annotated[User, Depends(require_admin)],
 ) -> None:
     """Admin-only: permanently delete a complaint."""
     complaint = await get_complaint(complaint_id)

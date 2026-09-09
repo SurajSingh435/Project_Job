@@ -11,9 +11,14 @@ pydantic==2.8.2
 pydantic-settings==2.4.0
 email-validator==2.2.0
 
-# Security / auth
+# Auth — bcrypt password hashing
 passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.3.0
+
+# Session cookies — itsdangerous is already a Starlette transitive dep,
+# pinned here for clarity
+itsdangerous==2.2.0
+
+# Form body parsing (needed by Starlette request.form())
 python-multipart==0.0.9
 
 # Environment

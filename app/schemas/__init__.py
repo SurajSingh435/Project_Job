@@ -4,8 +4,6 @@ from app.schemas.user import (
     UserRead,
     UserUpdate,
     UserLogin,
-    Token,
-    TokenData,
 )
 from app.schemas.complaint import (
     ComplaintCreate,
@@ -15,6 +13,6 @@ from app.schemas.complaint import (
 )
 
 __all__ = [
-    "UserCreate", "UserRead", "UserUpdate", "UserLogin", "Token", "TokenData",
+    "UserCreate", "UserRead", "UserUpdate", "UserLogin",
     "ComplaintCreate", "ComplaintRead", "ComplaintUpdate", "ComplaintListRead",
 ]

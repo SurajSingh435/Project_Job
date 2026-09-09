@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+from typing import List
 
 
 class Settings(BaseSettings):
@@ -18,10 +19,12 @@ class Settings(BaseSettings):
     mongodb_uri: str
     database_name: str = "complaints_db"
 
-    # Security
+    # Session cookie (itsdangerous / Starlette SessionMiddleware)
     secret_key: str = "change-me-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    session_max_age_seconds: int = 60 * 60 * 24 * 7  # 7 days
+
+    # CORS
+    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # AI (optional)
     openai_api_key: str = ""

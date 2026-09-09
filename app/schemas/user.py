@@ -18,17 +18,17 @@ class UserCreate(BaseModel):
     role: UserRole = Field(default=UserRole.resident)
 
 
+class UserLogin(BaseModel):
+    """Credentials for session-cookie login."""
+    email: EmailStr
+    password: str
+
+
 class UserUpdate(BaseModel):
     """Fields that a user (or admin) may update."""
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
-
-
-class UserLogin(BaseModel):
-    """Credentials for obtaining a JWT."""
-    email: EmailStr
-    password: str
 
 
 # ---------------------------------------------------------------------------
@@ -44,19 +44,3 @@ class UserRead(BaseModel):
     created_at: datetime
 
     model_config = {"populate_by_name": True, "from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
-# Auth / token schemas
-# ---------------------------------------------------------------------------
-
-class Token(BaseModel):
-    """JWT access token returned after successful login."""
-    access_token: str
-    token_type: str = "bearer"
-
-
-class TokenData(BaseModel):
-    """Claims decoded from a JWT."""
-    user_id: Optional[str] = None
-    role: Optional[UserRole] = None
