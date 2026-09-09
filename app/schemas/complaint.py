@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -88,3 +88,7 @@ class ComplaintListRead(BaseModel):
     updated_at: datetime
 
     model_config = {"populate_by_name": True, "from_attributes": True}
+
+class NLSearchQuery(BaseModel):
+    """Payload for natural language admin search."""
+    query: str = Field(..., min_length=1, max_length=500, examples=["show open electrical complaints from last 7 days"])

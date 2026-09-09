@@ -10,11 +10,12 @@ from app.schemas.complaint import (
     ComplaintRead,
     ComplaintUpdate,
     ComplaintListRead,
+    NLSearchQuery,
     StatusUpdate,
 )
 
 __all__ = [
     "UserCreate", "UserRead", "UserUpdate", "UserLogin",
-    "ComplaintCreate", "ComplaintRead", "ComplaintUpdate", "ComplaintListRead",
+    "ComplaintCreate", "ComplaintRead", "ComplaintUpdate", "ComplaintListRead", "NLSearchQuery",
     "StatusUpdate",
 ]

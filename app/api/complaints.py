@@ -1,5 +1,5 @@
-"""
-app/api/complaints.py — Complaint endpoints (Phase 3).
+ï»¿"""
+app/api/complaints.py â€” Complaint endpoints (Phase 3).
 
 Route map
 -------------------------------------------------------------
@@ -18,6 +18,7 @@ from app.api.deps import get_current_user, require_admin
 from app.models.complaint import Complaint, ComplaintStatus
 from app.models.user import User, UserRole
 from app.schemas.complaint import (
+    NLSearchQuery,
     ComplaintCreate,
     ComplaintListRead,
     ComplaintRead,
@@ -45,7 +46,7 @@ async def submit_complaint(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Complaint:
     """
-    **Resident** — file a new complaint.
+    **Resident** â€” file a new complaint.
 
     Requires an active session (any role).  
     Returns the created complaint with HTTP 201.
@@ -60,7 +61,7 @@ async def get_my_complaints(
     limit: int = Query(default=20, ge=1, le=100, description="Max results to return"),
 ) -> List[Complaint]:
     """
-    **Resident** — list only the complaints filed by the logged-in user.
+    **Resident** â€” list only the complaints filed by the logged-in user.
 
     Results are sorted newest-first.  
     Admins calling this endpoint will see only complaints they personally filed
@@ -117,7 +118,7 @@ async def admin_list_complaints(
     limit: int = Query(default=50, ge=1, le=200),
 ) -> List[Complaint]:
     """
-    **Admin** — list ALL complaints across all residents.
+    **Admin** â€” list ALL complaints across all residents.
 
     Optional query filters:  
     - `?status=open` / `in_progress` / `resolved`  
@@ -143,7 +144,7 @@ async def admin_update_status(
     _admin: Annotated[User, Depends(require_admin)],
 ) -> Complaint:
     """
-    **Admin** — update the status of a complaint.
+    **Admin** â€” update the status of a complaint.
 
     Accepted values: `open`, `in_progress`, `resolved`.  
     Returns 404 if the complaint does not exist.
@@ -166,7 +167,7 @@ async def admin_delete_complaint(
     _admin: Annotated[User, Depends(require_admin)],
 ) -> None:
     """
-    **Admin** — permanently delete a complaint. Returns 204.
+    **Admin** â€” permanently delete a complaint. Returns 204.
     """
     complaint = await get_complaint_by_id(complaint_id)
     if not complaint:
@@ -209,3 +210,23 @@ def _resolve_resident_id(complaint: Complaint) -> str:
     if hasattr(ref, "id"):
         return str(ref.id)
     return str(ref)
+
+@router.post("/admin/search", response_model=List[ComplaintListRead])
+async def admin_nl_search(
+    payload: NLSearchQuery,
+    _admin: Annotated[User, Depends(require_admin)]
+) -> List[Complaint]:
+    """
+    **Admin** - search complaints using natural language.
+    
+    Accepts queries like "show open electrical complaints from last 7 days".
+    Uses an LLM to extract structured filters securely.
+    """
+    from app.services.ai_service import parse_nl_search
+    from app.services.complaint_service import search_complaints_by_filter
+    
+    # 1. Ask LLM to parse natural language into structured filters
+    parsed_filters = await parse_nl_search(payload.query)
+    
+    # 2. Build and execute MongoDB query using strict whitelists
+    return await search_complaints_by_filter(parsed_filters)

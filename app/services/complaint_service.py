@@ -139,3 +139,29 @@ async def update_complaint(complaint: Complaint, data: ComplaintUpdate) -> Compl
 
 async def delete_complaint(complaint: Complaint) -> None:
     await complaint.delete()
+
+async def search_complaints_by_filter(parsed_filters: dict, limit: int = 50) -> List[Complaint]:
+    """
+    Execute a natural language search using the filters extracted by the AI.
+    """
+    query = {}
+    
+    status = parsed_filters.get("status")
+    if status in {"open", "in_progress", "resolved"}:
+        query["status"] = status
+        
+    category = parsed_filters.get("category")
+    allowed_categories = {"plumbing", "electrical", "security", "other", "road", "water"}
+    if category and category.lower() in allowed_categories:
+        query["category"] = category.lower()
+        
+    date_from_str = parsed_filters.get("date_from")
+    if date_from_str:
+        try:
+            # Parse ISO date and convert to aware datetime in UTC
+            date_from = datetime.fromisoformat(date_from_str.replace("Z", "+00:00"))
+            query["created_at"] = {"$gte": date_from}
+        except ValueError:
+            pass
+            
+    return await Complaint.find(query).sort([("created_at", DESCENDING)]).limit(limit).to_list()

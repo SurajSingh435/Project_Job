@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from typing import Literal
 
 import httpx
@@ -72,3 +72,58 @@ async def triage_complaint(description: str, submitted_category: str) -> dict:
     except (httpx.RequestError, httpx.HTTPStatusError, ValidationError, KeyError) as e:
         logger.warning(f"AI triage failed: {e}")
         return default_result
+
+from typing import Optional
+from datetime import datetime, timezone
+
+class NLSearchResponse(BaseModel):
+    category: Optional[str] = None
+    status: Optional[str] = None
+    date_from: Optional[str] = None
+
+async def parse_nl_search(query: str) -> dict:
+    if not settings.openai_api_key:
+        return {}
+    
+    today = datetime.now(timezone.utc).date().isoformat()
+    prompt = f"""
+    Extract search filters from the following query: "{query}"
+    Today's date is: {today}
+    
+    Return strict JSON with these keys:
+    - "category": (string or null) the category mentioned. Must be one of: "plumbing", "electrical", "security", "road", "water", "other", or null.
+    - "status": (string or null) the status mentioned. Must be one of: "open", "in_progress", "resolved", or null.
+    - "date_from": (string or null) ISO 8601 date string if a time range is specified (e.g. "2023-10-01T00:00:00Z"). If "last 7 days", calculate 7 days ago based on today's date.
+    """
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.openai_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": "You are a helpful assistant that outputs only JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            
+            parsed = NLSearchResponse.model_validate_json(content)
+            
+            return {
+                "category": parsed.category,
+                "status": parsed.status,
+                "date_from": parsed.date_from
+            }
+    except Exception as e:
+        logger.warning(f"NL Search parsing failed: {e}")
+        return {}
