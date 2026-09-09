@@ -1,5 +1,5 @@
-"""
-app/services/complaint_service.py � Business logic for complaint CRUD.
+﻿"""
+app/services/complaint_service.py — Business logic for complaint CRUD.
 """
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -30,12 +30,19 @@ def _resident_link_filter(resident_id: str) -> dict:
 # Create
 # ---------------------------------------------------------------------------
 
+from app.services.ai_service import triage_complaint
+
 async def create_complaint(data: ComplaintCreate, resident: User) -> Complaint:
     """Insert and return a new Complaint for *resident*."""
+    triage_info = await triage_complaint(data.description, data.category)
+    
     complaint = Complaint(
         resident_id=resident,  # type: ignore[arg-type]
-        category=data.category,
+        category=triage_info.get("corrected_category", data.category),
         description=data.description,
+        ai_title=triage_info.get("clean_title"),
+        ai_urgency=triage_info.get("urgency"),
+        ai_reasoning=triage_info.get("reasoning")
     )
     await complaint.insert()
     return complaint
