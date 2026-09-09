@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CivicPulse{% endblock %}</title>
+  <meta name="description" content="{% block description %}Citizen complaint management system{% endblock %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+</head>
+<body>
+
+{% if user %}
+<nav class="navbar">
+  <a href="{% if user.role == 'admin' %}/admin/dashboard{% else %}/dashboard{% endif %}" class="navbar-brand">
+    <span class="logo-icon">?</span>
+    CivicPulse
+  </a>
+  <div class="navbar-right">
+    <div class="user-pill">
+      <span class="badge badge-{{ user.role }}">{{ user.role }}</span>
+      <strong>{{ user.name }}</strong>
+    </div>
+    <form action="/logout" method="post" style="margin:0">
+      <button type="submit" class="btn btn-outline btn-sm">Sign out</button>
+    </form>
+  </div>
+</nav>
+{% endif %}
+
+{% block body %}{% endblock %}
+
+<script>
+  // Flash the row/element after any HTMX swap
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    const el = e.detail.target;
+    if (el) {
+      el.classList.remove('row-flash');
+      void el.offsetWidth; // reflow to restart animation
+      el.classList.add('row-flash');
+      setTimeout(() => el.classList.remove('row-flash'), 900);
+    }
+  });
+</script>
+</body>
+</html>
